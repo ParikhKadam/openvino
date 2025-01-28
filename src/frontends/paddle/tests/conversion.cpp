@@ -1,12 +1,12 @@
-// Copyright (C) 2018-2021 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #include "conversion_extension.hpp"
+#include "openvino/core/so_extension.hpp"
 #include "openvino/frontend/exception.hpp"
 #include "openvino/frontend/paddle/frontend.hpp"
 #include "paddle_utils.hpp"
-#include "so_extension.hpp"
 
 using namespace ov::frontend;
 

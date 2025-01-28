@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -155,6 +155,8 @@ public:
 #define CASE_DECONV_FP16_6 { 1, 16, 4, 5 }, { 1, 32, 9, 11 }, { 1, 1, 3, 3 }, { 2, 2 }, { 0, 0 }, { 1, 1 }, 1, data_types::f16, format::b_fs_yx_fsv16, data_types::f16, format::is_os_yx_isv16_osv16, data_types::f16, format::bfyx
 #define CASE_DECONV_FP16_7 { 1, 16, 4, 5 }, { 1, 32, 7, 9 }, { 1, 1, 1, 1 }, { 2, 2 }, { 0, 0 }, { 1, 1 }, 1, data_types::f16, format::b_fs_yx_fsv16, data_types::f16, format::is_os_yx_isv16_osv16, data_types::f16, format::bfyx
 #define CASE_DECONV_FP16_8 { 1, 32, 4, 5 }, { 1, 32, 7, 9 }, { 1, 1, 3, 3 }, { 2, 2 }, { 1, 1 }, { 1, 1 }, 32, data_types::f16, format::b_fs_yx_fsv16, data_types::f16,  format::gs_oiyx_gsv16, data_types::f16, format::bfyx
+// 1D deconv when the size of x axis is 1
+#define CASE_DECONV_FP16_9 { 1, 768, 1, 302 }, { 1, 384, 1, 1212 }, { 1, 1, 1, 8 }, { 4, 1 }, { 0, 0 }, { 1, 1 }, 1, data_types::f16, format::bfyx, data_types::f16,  format::oiyx, data_types::f16, format::bfyx
 
 #define CASE_DECONV_S8S8_1 { 1, 15, 4, 5 }, { 1, 30, 6, 7 }, { 1, 1, 3, 3 }, { 1, 1 }, { 0, 0 }, { 1, 1 }, 1, data_types::i8, format::bfyx, data_types::i8, format::oiyx, data_types::f32, format::bfyx
 #define CASE_DECONV_S8S8_2 { 1, 16, 4, 5 }, { 1, 32, 6, 7 }, { 1, 1, 3, 3 }, { 1, 1 }, { 0, 0 }, { 1, 1 }, 1, data_types::i8, format::b_fs_yx_fsv16, data_types::i8, format::oiyx, data_types::f32, format::bfyx
@@ -226,7 +228,7 @@ public:
 
 #define CASE_DECONV_ELTW_i8_1 { 1, 16, 3, 5 }, { 1, 32, 5, 7 }, { 1, 32, 5, 1 }, { 1, 1, 3, 3 }, { 1, 1 }, { 0, 0 }, { 1, 1 }, 1, data_types::i8, format::b_fs_yx_fsv16, data_types::i8, format::os_is_yx_osv16_isv16, data_types::f32, format::bfyx
 #define CASE_DECONV_ELTW_i8_2 { 1, 32, 4, 5, 3 }, { 1, 32, 6, 7, 5 }, { 1, 32, 1, 1, 1 }, { 1, 1, 3, 3, 3 }, { 2, 2, 2 }, { 1, 1, 1 }, { 1, 1, 1 }, 32, data_types::u8, format::b_fs_zyx_fsv16, data_types::i8,  format::goizyx, data_types::f32, format::bfzyx
-#define CASE_DECONV_ELTW_i8_3 { 1, 5, 5, 5, 5 }, { 1, 5, 5, 5, 5 }, { 1, 1, 1, 1, 1 }, { 1, 1, 1, 1, 1 }, { 1, 1, 1 }, { 0, 0, 0 }, { 1, 1, 1 }, 1, data_types::i8, format::bfzyx, data_types::i8, format::oiyx, data_types::f32, format::bfzyx
+#define CASE_DECONV_ELTW_i8_3 { 1, 5, 5, 5, 5 }, { 1, 5, 5, 5, 5 }, { 1, 1, 1, 1, 1 }, { 1, 1, 1, 1, 1 }, { 1, 1, 1 }, { 0, 0, 0 }, { 1, 1, 1 }, 1, data_types::i8, format::bfzyx, data_types::i8, format::oizyx, data_types::f32, format::bfzyx
 #define CASE_DECONV_ELTW_i8_4 { 1, 16, 1, 4 }, { 1, 16, 1, 6 }, { 1, 16, 1, 1 }, { 1, 1, 3, 3 }, { 1, 1 }, { 0, 0 }, { 1, 1 }, 1, data_types::i8, format::b_fs_yx_fsv16, data_types::i8, format::os_is_yx_osv16_isv16, data_types::f32, format::bfyx
 #define CASE_DECONV_ELTW_i8_5 { 1, 16, 2, 4 }, { 1, 16, 4, 6 }, { 1, 16, 4, 1 }, { 1, 1, 3, 3 }, { 1, 1 }, { 0, 0 }, { 1, 1 }, 1, data_types::i8, format::b_fs_yx_fsv16, data_types::i8, format::os_is_yx_osv16_isv16, data_types::f32, format::bfyx
 
@@ -240,6 +242,13 @@ TEST_P(deconv_actv, basic) {
         activation("act", input_info("deconv"), activation_func::relu),
         reorder("out", input_info("act"), p.default_format, data_types::f32)
     );
+
+    if (engine.get_device_info().supports_immad &&
+        p.default_type == data_types::f16 &&
+        p.weights_format == format::is_os_yx_isv16_osv16) {
+        GTEST_SKIP(); // Issue: 94154
+    }
+
     // Need much higher tolerance because of deconvolution -> convolution optimization
     tolerance = 1.f;
     execute(p);
@@ -263,6 +272,7 @@ INSTANTIATE_TEST_SUITE_P(fusings_gpu, deconv_actv, ::testing::ValuesIn(std::vect
     deconv_test_params{ CASE_DECONV_FP16_6, 2, 2, 3 },
     deconv_test_params{ CASE_DECONV_FP16_7, 2, 2, 3 },
     deconv_test_params{ CASE_DECONV_FP16_8, 2, 2, 3 },
+    deconv_test_params{ CASE_DECONV_FP16_9, 2, 2, 3 },
 
     deconv_test_params{ CASE_DECONV_U8S8_1, 2, 2, 3 },
     deconv_test_params{ CASE_DECONV_U8S8_2, 2, 2, 3 },
@@ -334,6 +344,12 @@ TEST_P(deconv_bias, basic) {
         eltwise("bias_add", { input_info("deconv"), input_info("bias") }, eltwise_mode::sum),
         reorder("out", input_info("bias_add"), p.default_format, data_types::f32)
     );
+
+    if (engine.get_device_info().supports_immad &&
+        p.default_type == data_types::f16 &&
+        p.weights_format == format::is_os_yx_isv16_osv16) {
+        GTEST_SKIP(); // Issue: 94154
+    }
 
     // Need much higher tolerance because of deconvolution -> convolution optimization
     tolerance = 1.f;
@@ -457,6 +473,13 @@ public:
             activation("act2", input_info("eltw"), activation_func::relu),
             reorder("out", input_info("act2"), p.default_format, data_types::f32)
         );
+
+        if (engine.get_device_info().supports_immad &&
+            p.default_type == data_types::f16 &&
+            p.weights_format == format::is_os_yx_isv16_osv16) {
+            GTEST_SKIP(); // Issue: 94154
+        }
+
         // Need much higher tolerance because of deconvolution -> convolution optimization
         tolerance = 1.f;
         execute(p, is_caching_test);
@@ -473,7 +496,7 @@ TEST_P(deconv_actv_eltw_actv, basic_cached) {
 
 INSTANTIATE_TEST_SUITE_P(fusings_gpu, deconv_actv_eltw_actv, ::testing::ValuesIn(std::vector<deconv_test_params>{
     // Some fusings disabled under deconvolution -> convolution optimization
-    deconv_test_params{ CASE_DECONV_FP32_1, 3, 2, 5 },
+    deconv_test_params{ CASE_DECONV_FP32_1, 3, 3, 5 },
     deconv_test_params{ CASE_DECONV_FP32_2, 2, 2, 5 },
     deconv_test_params{ CASE_DECONV_FP32_3, 2, 2, 5 },
     deconv_test_params{ CASE_DECONV_FP32_4, 2, 2, 5 },
@@ -569,6 +592,12 @@ TEST_P(deconv_scale_actv_quant_i8, basic) {
     // Activation won't be fused because onednn doesn't support softsign activation
     if (engine.get_device_info().supports_immad)
         p.expected_fused_primitives++;
+
+    if (engine.get_device_info().supports_immad &&
+        p.default_type == data_types::f16 &&
+        p.weights_format == format::is_os_yx_isv16_osv16) {
+        GTEST_SKIP(); // Issue: 94154
+    }
 
     tolerance = 1.f;
     execute(p);
@@ -681,6 +710,14 @@ TEST_P(deconv_scale_actv_quant_u8_eltw_scale_actv_quant_i8, basic) {
                  input_info("out2_lo"), input_info("out2_hi"), 255, data_types::i8),
         reorder("out", input_info("quant2"), p.default_format, data_types::f32)
     );
+
+    if (engine.get_device_info().supports_immad &&
+        p.default_type == data_types::f16 &&
+        (p.weights_format == format::is_os_yx_isv16_osv16 ||
+         p.weights_format == format::is_os_zyx_isv16_osv16)) {
+        GTEST_SKIP(); // Issue: 94154
+    }
+
     tolerance = 2.1f;
     execute(p);
 }
@@ -788,6 +825,9 @@ TEST_P(deconv_scale_activation_quantize_i8_eltwise_quantize_u8, basic) {
                  input_info("out_low2"), input_info("out_high2"), 256, data_types::u8),
         reorder("reorder_bfyx", input_info("quant2"), p.default_format, data_types::f32)
     );
+
+    ov::intel_gpu::ImplementationDesc gemmv_impl = { cldnn::format::type::any, "", impl_types::ocl };
+    cfg_fused.set_property(ov::intel_gpu::force_implementations(ov::intel_gpu::ImplForcingMap{ { "deconv_prim", gemmv_impl } }));
 
     tolerance = 1.f;
     execute(p);

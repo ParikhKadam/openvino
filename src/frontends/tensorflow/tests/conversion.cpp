@@ -1,11 +1,11 @@
-// Copyright (C) 2018-2021 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #include "conversion_extension.hpp"
+#include "openvino/core/so_extension.hpp"
 #include "openvino/frontend/extension/telemetry.hpp"
 #include "openvino/frontend/tensorflow/frontend.hpp"
-#include "so_extension.hpp"
 #include "tf_utils.hpp"
 
 using namespace ov::frontend;

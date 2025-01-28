@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -6,13 +6,37 @@
 
 #include <vector>
 #include <cstdint>
-#include "ngraph/node.hpp"
 
-namespace ngraph {
+#include "openvino/core/node.hpp"
+
+namespace ov {
 namespace snippets {
 
-using code = const uint8_t *;
-using RegInfo = std::pair<std::vector<size_t>, std::vector<size_t>>;
+/**
+ * @interface RegType
+ * @brief Register type of input and output operations
+ */
+enum class RegType { gpr, vec, mask, undefined };
+/**
+ * @interface Reg
+ * @brief Register representation: type of register and index
+ */
+struct Reg {
+    enum {UNDEFINED_IDX = std::numeric_limits<size_t>::max()};
+    Reg() = default;
+    Reg(RegType type_, size_t idx_) : type(type_), idx(idx_) {}
+
+    bool is_defined() const  { return  type != RegType::undefined && idx != UNDEFINED_IDX; }
+    RegType type = RegType::undefined;
+    size_t idx = UNDEFINED_IDX;
+
+    friend bool operator==(const Reg& lhs, const Reg& rhs);
+    friend bool operator<(const Reg& lhs, const Reg& rhs);
+    friend bool operator>(const Reg& lhs, const Reg& rhs);
+    friend bool operator!=(const Reg& lhs, const Reg& rhs);
+    friend std::ostream& operator<<(std::ostream& s, const Reg& r);
+};
+using RegInfo = std::pair<std::vector<Reg>, std::vector<Reg>>;
 
 /**
  * @interface Emitter
@@ -24,11 +48,7 @@ public:
     /**
      * @brief Default constructor
      */
-    Emitter(const std::shared_ptr<ngraph::Node>& n) {
-    }
-
-    Emitter(std::vector<std::pair<std::shared_ptr<Emitter>, RegInfo>>& region) {
-    }
+    Emitter() {}
 
     /**
      * @brief called by generator to generate code to produce target code for a specific operation
@@ -47,12 +67,10 @@ public:
      * @brief called by generator to generate data section, if needed for a specific operation
      * @return void
      */
-    virtual void emit_data() const {
-    }
+    virtual void emit_data() const {}
+
     virtual ~Emitter() = default;
 };
 
-using AllocatedEmitter = std::pair<std::shared_ptr<Emitter>, ngraph::snippets::RegInfo>;
-
 } // namespace snippets
-} // namespace ngraph
+} // namespace ov

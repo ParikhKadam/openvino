@@ -10,11 +10,12 @@ are available by default, but some others might require plugin recompilation.
 ### How to use it
 
 First, this feature should be enabled from cmake configuration `ENABLE_DEBUG_CAPS`. When OpenVINO is released, it is turned off by default.
-The parameters should be set from an environment variable when calling inference engine API.
+
+The parameters can be set from an environment variable when calling inference engine API.
 
 ```
 $ OV_GPU_Verbose=1 ./benchmark_app ...      # Run benchmark_app with OV_GPU_Verbose option
-$ OV_GPU_DumpLayersPath="cldnn/" ./benchmark_app ...   # Run benchmark_app and store intermediate buffers into cldnn/ directory.
+$ OV_GPU_DumpLayersPath="dump/" ./benchmark_app ...   # Run benchmark_app and store intermediate buffers into dump/ directory.
 ```
 
 For Windows OS, use the following syntax:
@@ -39,7 +40,7 @@ Behavior when both versions are specified is not defined.
 
 Some options also allow multiple prefixes: `OV` and `OV_GPU`. `OV` prefix is intended to be used for options common for all OpenVINO components. When an option is set twice with different prefixes, then `OV_GPU` has higher priority.
 
-### List of parameters 
+### List of parameters
 
 This is a part of the full list. To get all parameters, see OV_GPU_Help result.
 
@@ -47,10 +48,10 @@ This is a part of the full list. To get all parameters, see OV_GPU_Help result.
 * `OV_GPU_Verbose`: Verbose execution. Currently, `Verbose=1` and `2` are supported.
 * `OV_GPU_PrintMultiKernelPerf`: Prints kernel latency for multi-kernel primitives. This is turned on by setting `1`. Execution time is printed.
 * `OV_GPU_DisableUsm`: Disables the usage of usm (unified shared memory). This is turned on by setting `1`.
-* `OV_GPU_DisableOnednn`: Disables oneDNN for discrete GPU (no effect for integrated GPU).
-* `OV_GPU_DumpGraphs`: Dumps an optimized graph into the path that this variable points. This is turned on by setting the destination path into this variable.
+* `OV_GPU_DisableOnednn`: Disables oneDNN for the hardware with XMX (If GPU does not have XMX, it does not have any effect)
+* `OV_GPU_DumpGraphs`: Dumps optimized graphs into the path that this variable points. This is turned on by setting the destination path into this variable.
 * `OV_GPU_DumpSources`: Dumps openCL sources
-* `OV_GPU_DumpLayersPath`: Enables intermediate buffer dump and store the tensors. This is turned on by setting the destination path into this variable. You can check the exact layer name from `OV_GPU_Verbose=1`.
+* `OV_GPU_DumpLayersPath`: Enables intermediate buffer dump and store the tensors. This is turned on by setting the destination path into this variable. You can check the exact layer name from `OV_GPU_ListLayers=1`.
 * `OV_GPU_DumpLayers`: Dumps intermediate buffers only for the layers that this variable specifies. Multiple layers can be specified with a space delimiter. Dump feature should be enabled through `OV_GPU_DumpLayersPath`.
 * `OV_GPU_DumpLayersResult`: Dumps output buffers of result layers only.
 * `OV_GPU_DumpLayersDstOnly`: When dumping intermediate buffer, dumps destination buffer only. This is turned on by setting `1`.
@@ -62,16 +63,63 @@ This is a part of the full list. To get all parameters, see OV_GPU_Help result.
 * `OV_GPU_ForceImplType`:               Forces implementation type of a target primitive or a layer. [primitive or layout_name]:[impl_type] For primitives, `fc:onednn`, `fc:ocl`, `do:cpu`, `do:ocl`, `reduce:ocl` and `reduce:oneDNN` are supported
 * `OV_GPU_MaxKernelsPerBatch`:          Maximum number of kernels in a batch during compiling kernels.
 
+### How to check debug-config works
+If you are uncertain whether debug-config is working or not, you can confirm that with OV_GPU_Help. OV_GPU_Help will just show the help message and terminate the current application. If the help message is properly printed, you can basically believe that this debug config is working correctly. Please note that it requires full execution of inference because the help message is printed from GPU plugin. If you just run `benchmark_app` without any option, it will not show the benchmark_app help message, not the debug-config help message.
+
+```
+$ OV_GPU_Help=1 ./benchmark_app -m resnet_v1.5_50.xml -d GPU
+[Step 1/11] Parsing and validating input arguments
+[ INFO ] Parsing input parameters
+[Step 2/11] Loading OpenVINO Runtime
+[ INFO ] OpenVINO:
+[ INFO ] Build ................................. 2024.2.0
+[ INFO ]
+[ INFO ] Device info:
+GPU_Debug: Config Help = 1
+GPU_Debug: Supported environment variables for debugging
+GPU_Debug:  - OV_GPU_Help                                          Print help messages
+GPU_Debug:  - OV_GPU_Verbose                                       Verbose execution
+GPU_Debug:  - OV_GPU_VerboseColor                                  Print verbose color
+GPU_Debug:  - OV_GPU_ListLayers                                    Print layers names
+GPU_Debug:  - OV_GPU_PrintMultiKernelPerf                          Print execution time of each kernel in multi-kernel primitimive
+GPU_Debug:  - OV_GPU_PrintInputDataShapes                          Print data_shapes of input layers for benchmark_app.
+GPU_Debug:  - OV_GPU_DisableUsm                                    Disable usm usage
+GPU_Debug:  - OV_GPU_DisableOnednn                                 Disable onednn for discrete GPU (no effect for integrated GPU)
+GPU_Debug:  - OV_GPU_DisableOnednnOptPostOps                       Disable onednn optimize post operators
+...
+<application is terminated right after the help message>
+```
+
+You can also check the message from the debug-config parser. As shown below, if env variable is detected, it will print the variable name and configuration.
+```
+$ OV_GPU_Verbose=1 OV_GPU_DumpGraphs=graph/ ./benchmark_app -m resnet.xml -d GPU
+[Step 1/11] Parsing and validating input arguments
+[ INFO ] Parsing input parameters
+[Step 2/11] Loading OpenVINO Runtime
+[ INFO ] OpenVINO:
+[ INFO ] Build ................................. 2024.2.0
+[ INFO ]
+[ INFO ] Device info:
+GPU_Debug: Config Verbose = 1               # OV_GPU_Verbose is recognized
+GPU_Debug: Config DumpGraphs = graph/       # OV_GPU_DumpGraphs is recognized
+[ INFO ] GPU
+[ INFO ] Build ................................. 2024.2.0
+[ INFO ]
+[Step 3/11] Setting device configuration
+...
+```
+
+
 ## Dump execution graph
 
 The execution graph (also known as a runtime graph) is a device-specific graph after all transformations applied by the plugin. It is a very useful
 feature for performance analysis and it allows finding a source of performance regressions quickly. The execution graph can be retrieved from the plugin
-using `GetExecGraphInfo()` method of `InferenceEngine::ExecutableNetwork` and then serialized as usual IR:
+using `get_runtime_model()` method of `ov::CompiledModel` and then serialized as usual IR:
 ```cpp
-    ExecutableNetwork exeNetwork;
+    ov::CompiledModel compiled_model;
     // Load some model into the plugin
-    CNNNetwork execGraphInfo = exeNetwork.GetExecGraphInfo();
-    execGraphInfo.serialize("/path/to/serialized/exec/graph.xml");
+    std::shared_ptr<ov::Model> runtime_model = compiled_model.get_runtime_model();
+    ov::serialize(runtime_model, "/path/to/serialized/exec/graph.xml");
 ```
 
 The capability to retrieve the execution graph and store it on the disk is integrated into `benchmark_app`. The execution graph can be simply dumped
@@ -116,14 +164,14 @@ Most of the data here is very handy for performance analysis. For example, for e
 
 This graph can be visualized using Netron tool and all these properties can be analyzed there.
 
-> **NOTE**: execution time collection for each primitive requires `CONFIG_KEY(PERF_COUNT)` to be enabled (`benchmark_app` does it automatically). Therefore, the overall model execution time is usually much worse in such use cases.
+> **NOTE**: execution time collection for each primitive requires `ov::enable_profiling` to be enabled (`benchmark_app` does it automatically). Therefore, the overall model execution time is usually much worse in such use cases.
 
 ## Performance counters
 
 This feature is a simplified version of the execution graph as it provides much less information, but it might be more suitable for quick analysis and some kind of
 processing with scripts.
 
-Performance counters can be retrieved from each `InferenceEngine::InferRequest` object using `getPerformanceCounts()` method. This feature is also integrated
+Performance counters can be retrieved from each `ov::InferRequest` object using `get_profiling_info()` method. This feature is also integrated
 into `benchmark_app` and the counters can be printed to count using `-pc` parameter.
 
 The format looks as follows:
@@ -149,14 +197,6 @@ So it allows you to quickly check the execution time of some operation on the de
 
 * You can dump graphs with `OV_GPU_DumpGraphs` of debug config. For the usage of debug config, see the [link](#debug-config).
 
-* Alternatively, you can also enable the dumps from the application source code:
-clDNN plugin has the special internal config option - `graph_dumps_dir`, which can be set from the user app via plugin config:
-```cpp
-Core ie;
-std::map<std::string, std::string> device_config;
-device_config[CLDNN_CONFIG_KEY(GRAPH_DUMPS_DIR)] = "/some/existing/path/";
-ie.SetConfig(device_config, "GPU");
-```
 
 For each stage, it dumps:
 ```
@@ -175,14 +215,6 @@ Since *Intel_GPU* source tree contains only *templates* of the OpenCL™ kernels
 
 * You can use `OV_GPU_DumpSources` of debug config. For the usage of debug config, see [link](#debug-config).
 
-* You can also dump OpenCL source code by changing OpenVINO source code:
-clDNN plugin has the special internal config option - `sources_dumps_dir`, which can be set from the user app via plugin config:
-```cpp
-Core ie;
-std::map<std::string, std::string> device_config;
-device_config[CLDNN_CONFIG_KEY(SOURCES_DUMPS_DIR)] = "/some/existing/path/";
-ie.SetConfig(device_config, "GPU");
-```
 
 When this key is enabled, the plugin dumps multiple files with the following names:
 ```
@@ -236,18 +268,34 @@ Each file contains a single buffer in a common planar format (`bfyx`, `bfzyx`, o
 shape: [b:1, f:1280, x:1, y:1, z:1, w:1, g:1] (count: 1280, original format: b_fs_yx_fsv16)
 ```
 
-For troubleshooting the accuracy, you may want to compare the results of GPU plugin and CPU plugin. For CPU dump, see [Blob dumping](https://github.com/openvinotoolkit/openvino/blob/master/src/plugins/intel_cpu/src/docs/blob_dumping.md)
+For troubleshooting the accuracy, you may want to compare the results of GPU plugin and CPU plugin. For CPU dump, see [Blob dumping](https://github.com/openvinotoolkit/openvino/blob/master/src/plugins/intel_cpu/docs/debug_capabilities/blob_dumping.md)
 
 
 ## Run int8 model on Gen9 HW
 
 As Gen9 HW does not have hardware acceleration, low-precision transformations are disabled by default. Therefore, quantized networks are executed in full precision (FP16 or FP32), with explicit execution of quantize operations.
 If you do not have Gen12 HW, but want to debug the network's accuracy or performance of simple operations (which does not require dp4a support), then you can enable low precision pipeline on Gen9, with one of the following approaches:
-1. Add `{PluginConfigInternalParams::KEY_LP_TRANSFORMS_MODE, PluginConfigParams::YES}` option to the plugin config.
+1. Add `ov::intel_gpu::enable_lp_transformations(true)` option to the plugin config.
 2. Enforce `supports_imad = true` [here](https://github.com/openvinotoolkit/openvino/blob/master/inference-engine/thirdparty/clDNN/src/gpu/device_info.cpp#L226)
 3. Enforce `conf.enableInt8 = true` [here](https://github.com/openvinotoolkit/openvino/blob/master/inference-engine/src/cldnn_engine/cldnn_engine.cpp#L366)
 
 After that, the plugin will run exactly the same scope of transformations as on Gen12 HW and generate similar kernels (a small difference is possible due to different EUs count).
+
+
+## Checking OpenCL execution
+
+OpenVINO GPU plugin runs on top of opencl. [opencl-intercept-layer](https://github.com/intel/opencl-intercept-layer/) is a very handy tool to check opencl execution.
+
+You can clone the repo and build it, you can use it to profile OpenVINO GPU plugin from various perspective. `cliloader` will be created when you build the repo. Here are some examples:
+
+```
+# See OpenCL call log
+$ CLI_CallLogging=1 /path/to/cliloader /path/to/benchmark_app ...
+
+# Profile device timing for kernel execution
+$ CLI_DevicePerformanceTiming=1 /path/to/cliloader /path/to/benchmark_app ...
+```
+
 
 ## See also
 

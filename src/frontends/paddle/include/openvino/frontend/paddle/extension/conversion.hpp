@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -13,7 +13,7 @@ namespace ov {
 namespace frontend {
 namespace paddle {
 
-class PADDLE_API ConversionExtension : public ConversionExtensionBase {
+class PADDLE_FRONTEND_API ConversionExtension : public ConversionExtensionBase {
 public:
     using Ptr = std::shared_ptr<ConversionExtension>;
 
@@ -22,6 +22,8 @@ public:
     ConversionExtension(const std::string& op_type, const ov::frontend::CreatorFunctionNamed& converter)
         : ConversionExtensionBase(op_type),
           m_converter(converter) {}
+
+    ~ConversionExtension() override;
 
     const ov::frontend::CreatorFunctionNamed& get_converter() const {
         return m_converter;
