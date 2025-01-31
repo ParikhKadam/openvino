@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -170,6 +170,18 @@ public:
 // permute_bfzyx_to_bfyxz
 #define CASE_PERMUTE_TILE_BFZYX_TO_BFYXZ_0 { 1, 8, 8, 2, 2 }, { 1, 8, 2, 8, 2 }, { 0, 1, 3, 4, 2 }, tensor{ 0 }, data_types::f32, format::bfzyx, data_types::f32, format::bfzyx
 
+// permute_f_y_axes
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_0 { 1, 8, 4, 2 }, { 1, 2, 4, 8 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::bfyx
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_1 { 1, 32, 256, 512 }, { 1, 512, 256, 32 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::b_fs_yx_fsv32, data_types::f32, format::b_fs_yx_fsv32
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_2 {1, 4, 1, 8 }, { 1, 8, 1, 4 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::b_fs_yx_fsv8
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_3 {1, 64, 1, 32 }, { 1, 32, 1, 64 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::b_fs_yx_fsv32, data_types::f32, format::b_fs_yx_fsv32
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_4 {1, 2, 1, 4 }, { 1, 4, 1, 2 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::bfyx
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_5 {1, 4, 1, 8 }, { 1, 8, 1, 4 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::bfyx
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_6 {1, 2, 1, 8 }, { 1, 8, 1, 2 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::bfyx
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_7 {1, 16, 1, 8 }, { 1, 8, 1, 16 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::bfyx
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_8 {1, 4, 1, 32 }, { 1, 32, 1, 4 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::b_fs_yx_fsv32
+#define CASE_PERMUTE_TILE_BFYX_TO_BYFX_9 {1, 16, 1, 2 }, { 1, 2, 1, 16 }, { 0, 2, 1, 3 }, tensor{ 0 }, data_types::f32, format::bfyx, data_types::f32, format::bfyx
+
 class permute_activation_scale_eltwise: public PermuteFusingTest {};
 TEST_P(permute_activation_scale_eltwise, basic) {
     auto p = GetParam();
@@ -265,6 +277,16 @@ INSTANTIATE_TEST_SUITE_P(fusings_gpu, permute_activation_scale_eltwise, ::testin
 
     // Fusing tests for permute_bfzyx_to_bfyxz
     permute_params{ CASE_PERMUTE_TILE_BFZYX_TO_BFYXZ_0, 2, 5 },
+
+    // Fusing tests for permute_f_y_axes
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_0, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_1, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_2, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_3, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_4, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_5, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_6, 2, 5 },
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_7, 2, 5 }
 }));
 
 class permute_quant_u8: public PermuteFusingTest {};
@@ -470,6 +492,9 @@ INSTANTIATE_TEST_SUITE_P(fusings_gpu, permute_scale_eltwise_actv_scale_actv, ::t
 
     // Fusing tests for permute_bfzyx_to_bfyxz
     permute_params{ CASE_PERMUTE_TILE_BFZYX_TO_BFYXZ_0, 2, 7 },
+
+    // Fusing tests for permute_f_y_axes
+    permute_params{ CASE_PERMUTE_TILE_BFYX_TO_BYFX_0, 2, 7 },
 }));
 
 /* ------------------------------------------------------------------------------------------------------------ */

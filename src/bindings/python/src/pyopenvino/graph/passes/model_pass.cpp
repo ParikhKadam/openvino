@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -8,6 +8,8 @@
 
 #include <openvino/pass/pass.hpp>
 #include <string>
+
+#include "pyopenvino/core/common.hpp"
 
 namespace py = pybind11;
 
@@ -30,7 +32,7 @@ void regclass_passes_ModelPass(py::module m) {
     py::class_<ov::pass::ModelPass, std::shared_ptr<ov::pass::ModelPass>, ov::pass::PassBase, PyModelPass> model_pass(
         m,
         "ModelPass");
-    model_pass.doc() = "openvino.runtime.passes.ModelPass wraps ov::pass::ModelPass";
+    model_pass.doc() = "openvino.passes.ModelPass wraps ov::pass::ModelPass";
     model_pass.def(py::init<>());
     model_pass.def("run_on_model",
                    &ov::pass::ModelPass::run_on_model,
@@ -38,10 +40,13 @@ void regclass_passes_ModelPass(py::module m) {
                    R"(
                    run_on_model must be defined in inherited class. This method is used to work with Model directly.
 
-                   :param model: openvino.runtime.Model to be transformed.
-                   :type model: openvino.runtime.Model
+                   :param model: openvino.Model to be transformed.
+                   :type model: openvino.Model
 
                    :return: True in case if Model was changed and False otherwise.
                    :rtype: bool
     )");
+    model_pass.def("__repr__", [](const ov::pass::ModelPass& self) {
+        return Common::get_simple_repr(self);
+    });
 }

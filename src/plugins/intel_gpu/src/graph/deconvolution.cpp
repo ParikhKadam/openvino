@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2025 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 #include <string>
@@ -31,7 +31,7 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node, ke
     }
 
     if (impl_param.has_fused_primitives()) {
-        data_type = impl_param.get_fused_output_layout().data_type;
+        data_type = impl_param.get_output_element_type();
     }
 
     auto pad = desc->pad;
@@ -117,7 +117,7 @@ std::vector<layout> deconvolution_inst::calc_output_layouts(deconvolution_node c
     }
 
     if (impl_param.has_fused_primitives()) {
-        output_type = impl_param.get_fused_output_layout().data_type;
+        output_type = impl_param.get_output_element_type();
     }
 
     auto strides = desc->stride;
@@ -187,13 +187,11 @@ std::vector<layout> deconvolution_inst::calc_output_layouts(deconvolution_node c
             auto mem = memory_deps.at(2);
             auto dims = read_vector<int64_t>(mem, impl_param.get_stream());
             auto dims_shape = ov::Shape{dims.size()};
+            auto const_data =
+                std::unordered_map<size_t, ov::Tensor>{{2, ov::Tensor(ov::element::i64, dims_shape, dims.data())}};
             input_shapes.push_back(dims_shape);
-            output_shapes = ov::op::v1::shape_infer(
-                &op,
-                input_shapes,
-                pads_begin,
-                pads_end,
-                {{2, std::make_shared<ov::HostTensor>(ov::element::i64, dims_shape, dims.data())}});
+            output_shapes =
+                ov::op::v1::shape_infer(&op, input_shapes, pads_begin, pads_end, ov::make_tensor_accessor(const_data));
         } else {
             output_shapes = ov::op::v1::shape_infer(&op, input_shapes, pads_begin, pads_end);
         }
@@ -213,13 +211,12 @@ std::vector<layout> deconvolution_inst::calc_output_layouts(deconvolution_node c
             auto mem = memory_deps.at(2);
             auto dims = read_vector<int64_t>(mem, impl_param.get_stream());
             auto dims_shape = ov::Shape{dims.size()};
+            auto const_data =
+                std::unordered_map<size_t, ov::Tensor>{{2, ov::Tensor(ov::element::i64, dims_shape, dims.data())}};
             input_shapes.push_back(dims_shape);
-            output_shapes = ov::op::v1::shape_infer(
-                &op,
-                input_shapes,
-                pads_begin,
-                pads_end,
-                {{2, std::make_shared<ov::HostTensor>(ov::element::i64, dims_shape, dims.data())}});
+
+            output_shapes =
+                ov::op::v1::shape_infer(&op, input_shapes, pads_begin, pads_end, ov::make_tensor_accessor(const_data));
         } else {
             output_shapes = ov::op::v1::shape_infer(&op, input_shapes, pads_begin, pads_end);
         }
@@ -269,7 +266,7 @@ deconvolution_inst::typed_primitive_inst(network& network, deconvolution_node co
     auto stride = argument->stride;
     auto pad = argument->pad;
 
-    auto input_layout = node.input().get_output_layout();
+    auto input_layout = node.get_input_layout();
     auto output_layout = node.get_output_layout();
 
     CLDNN_ERROR_NOT_EQUAL(node.id(),
@@ -328,12 +325,6 @@ deconvolution_inst::typed_primitive_inst(network& network, deconvolution_node co
                                 "Spatial[0] of bias should be 1. Bias isn't 1D vector.");
     }
 
-    CLDNN_ERROR_NOT_EQUAL(node.id(),
-                            "deconvolution padding filling value",
-                            node.get_output_layout().data_padding.filling_value(),
-                            "padding mode",
-                            0.0f,
-                            "Unknown padding mode in deconvolution.");
     CLDNN_ERROR_NOT_EQUAL(node.id(),
                             "Weights feature maps number",
                             filter_inst.ifm() * filter_inst.group(),
